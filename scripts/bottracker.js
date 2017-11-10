@@ -145,7 +145,7 @@ $(function () {
             }
         });
 
-        steem.api.getAccounts(['minnowpond', 'resteembot', 'originalworks', 'treeplanter', 'followforupvotes', 'steemthat', 'frontrunner', 'steemvoter', 'morwhale'], function (err, result) {
+        steem.api.getAccounts(['minnowpond', 'resteembot', 'originalworks', 'treeplanter', 'followforupvotes', 'steemthat', 'frontrunner', 'steemvoter', 'morwhale', 'moonbot'], function (err, result) {
             try {
                 result.forEach(function (account) {
                     $('#' + account.name + '-vote').text('$' + getVoteValue(100, account).formatMoney());
@@ -171,10 +171,25 @@ $(function () {
                     var vote = getVoteValue(100, account);
                     var last_vote_time = new Date((account.last_vote_time) + 'Z');
 
+                    var bot = bots.filter(function (b) { return b.name == account.name; })[0];
+                    if(account.json_metadata != null && account.json_metadata != '') {
+                      var json_metadata = JSON.parse(account.json_metadata);
+
+                      if(json_metadata && json_metadata.config) {
+                        var config = json_metadata.config;
+
+                        if(config.min_bid_sbd && parseFloat(config.min_bid_sbd) > 0)
+                          bot.min_bid = parseFloat(config.min_bid_sbd);
+
+                        if(config.bid_window && parseFloat(config.bid_window) > 0)
+                          bot.interval = parseFloat(config.bid_window);
+
+                        bot.comments = config.comments;
+                      }
+                    }
+
                     steem.api.getAccountHistory(account.name, -1, (first_load) ? 500 : 50, function (err, result) {
                         if (err) return;
-
-                        var bot = bots.filter(function (b) { return b.name == account.name; })[0];
 
                         if (!bot.rounds)
                             bot.rounds = [];
@@ -206,7 +221,7 @@ $(function () {
                                 }
                             }
                         });
-                        
+
                         bot.last_vote_time = last_vote_time;
                         bot.vote = vote * bot.interval / 2.4;
                         bot.total = round.total;
